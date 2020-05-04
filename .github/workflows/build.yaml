@@ -39,11 +39,11 @@ jobs:
           version=$(cat VERSION)
           docker build . --file Dockerfile --tag $USERNAME/$IMAGE:latest
           docker tag $USERNAME/$IMAGE:latest $USERNAME/$IMAGE:$version
+
       - name: Push image
         run: |
           version=$(cat VERSION)
           docker push $USERNAME/$IMAGE:latest
           docker push $USERNAME/$IMAGE:$version
-
         env:
           CI: true
