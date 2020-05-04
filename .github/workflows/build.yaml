@@ -1,0 +1,49 @@
+name: build-docker-image
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  USERNAME: qwertmax
+  IMAGE: helm-kubectl
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Log into registry
+        run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u ${{ secrets.DOCKERHUB_USER }} --password-stdin
+
+      - name: Make a new Tag
+        run: |
+          git fetch --all --tags
+          version=$(git describe --tags --abbrev=0)
+          echo "version: $version"
+          docker run --rm alpine/semver semver -c -i minor $version > VERSION
+          version=$(cat VERSION)
+          git config --global user.name ${GITHUB_ACTOR}
+          git config --global user.email ${GITHUB_ACTOR}@burningbuttons.com
+          git tag -a "$version" -m "version $version"
+          git push --tags
+
+      - name: Build the Docker image
+        run: |
+          version=$(cat VERSION)
+          docker build . --file Dockerfile --tag $USERNAME/$IMAGE:latest
+          docker tag $USERNAME/$IMAGE:latest $USERNAME/$IMAGE:$version
+      - name: Push image
+        run: |
+          version=$(cat VERSION)
+          docker push $USERNAME/$IMAGE:latest
+          docker push $USERNAME/$IMAGE:$version
+
+        env:
+          CI: true
